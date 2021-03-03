@@ -1,0 +1,78 @@
+.dock {
+  display: flex;
+  flex-direction: column;
+  justify-content: stretch;
+  align-items: stretch;
+  height: 100%;
+  width: 100%;
+}
+
+.dock-header {
+  background: #222;
+  height: 36px;
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-end;
+}
+
+.tab-btn {
+  background: #2a2a2a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 7px;
+  border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
+  height: 32px;
+  user-select: none;
+}
+
+.tab-btn.active {
+  border-top: 1px solid #ffc800;
+}
+
+.tab-btn-title {
+  color: #777;
+}
+
+.tab-btn.active .tab-btn-title {
+  color: #eaeaea;
+}
+
+.tab-btn.active {
+  background: #444;
+}
+
+.tab-btn-close {
+  margin-left: 5px;
+  background: #444;
+  color: #222;
+  border: none;
+  border-radius: 10px;
+  height: 16px;
+  width: 16px;
+  padding: 0;
+  line-height: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.tab-btn.active .tab-btn-close {
+  background: #970b0b;
+  color: #ddd;
+}
+
+.tab-btn .tab-btn-close:hover {
+  background: #555;
+  color: #333;
+}
+
+.tab-btn.active .tab-btn-close:hover {
+  background: #d50b0b;
+  color: #eaeaea;
+}
+
+.dock-content {
+  flex-grow: 1;
+}

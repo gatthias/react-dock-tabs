@@ -1,0 +1,32 @@
+.splitter {
+  display: flex;
+  justify-content: stretch;
+  align-items: stretch;
+  width: 100%;
+  height: 100%;
+}
+
+.splitter.h-splitter {
+  flex-direction: row;
+}
+
+.splitter.v-splitter {
+  flex-direction: column;
+}
+
+.splitter-handle {
+  background: #111;
+  display: block;
+}
+
+.h-splitter > .splitter-handle {
+  height: 100%;
+  width: 4px;
+  cursor: col-resize;
+}
+
+.v-splitter > .splitter-handle {
+  width: 100%;
+  height: 4px;
+  cursor: row-resize;
+}
