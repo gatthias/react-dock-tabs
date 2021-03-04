@@ -8,6 +8,10 @@ import {
 } from "./Splitter";
 import { Dock } from "./Dock";
 
+
+const DEBUG = true;
+const debugLog = (...args) => DEBUG && console.log(...args);
+
 export const DockTabs = ({
   layout: initialLayout,
   onLayoutChange,
@@ -82,6 +86,178 @@ export const DockTabs = ({
       }
     });
 
+    newLayoutDraft.mainArea = findWithCallbackAndReplaceNode(newLayoutDraft.mainArea, (node) => node.type === "split" && node.children && node.children.filter(children => children.dummyContentSplit != null).length > 0, node => {
+      const splittingDock = node.children.filter(children => children.dummyContentSplit != null)[0];
+      const splittingDockIndex = node.children.indexOf(splittingDock);
+      const splitData = splittingDock.dummyContentSplit;
+
+      if(splitData.position === "center"){
+        const tabKey = splitData.key;
+        const newTabs = [...new Set([...splittingDock.tabs.filter(tab => tab !== tabKey), tabKey])];
+        const newChild = {
+          ...splittingDock,
+          tabs: newTabs,
+          activeTab: tabKey,
+          dummyContentSplit: undefined
+        }
+        const newChildren = [...node.children];
+        newChildren.splice(splittingDockIndex, 1, newChild);
+
+        return {
+          ...node,
+          children: newChildren
+        }
+      }else if(node.orientation === "h"){
+        if(splitData.position === "left" || splitData.position === "right"){
+          const dockRatios = splittingDock.ratio / 2;
+          const createdDock = {
+            type: 'dock',
+            ratio: dockRatios,
+            tabs: [splitData.key],
+            activeTab: splitData.key
+          }
+
+          const newTabs = [...new Set(splittingDock.tabs.filter(tab => tab !== splitData.key))];
+          const updatedDock = {
+            ...splittingDock,
+            ratio: dockRatios,
+            tabs: newTabs,
+            activeTab: splittingDock._lastActiveTab || newTabs[newTabs.length - 1],
+            dummyContentSplit: undefined
+          }
+
+          const newChildren = [...node.children];
+          if(splitData.position === "left"){
+            newChildren.splice(splittingDockIndex, 1, createdDock, updatedDock);
+          }else if(splitData.position === "right"){
+            newChildren.splice(splittingDockIndex, 1, updatedDock, createdDock);
+          }
+
+          return {
+            ...node,
+            children: newChildren
+          }
+        }else if(splitData.position === "top" || splitData.position === "bottom"){
+          const dockRatios = 0.5;
+          const createdDock = {
+            type: 'dock',
+            ratio: dockRatios,
+            tabs: [splitData.key],
+            activeTab: splitData.key
+          }
+          
+          const newTabs = [...new Set(splittingDock.tabs.filter(tab => tab !== splitData.key))];
+          const updatedDock = {
+            ...splittingDock,
+            ratio: dockRatios,
+            tabs: newTabs,
+            activeTab: splittingDock._lastActiveTab || newTabs[newTabs.length - 1],
+            dummyContentSplit: undefined
+          }
+
+          let newSplitChildren;
+          if(splitData.position === "top"){
+            newSplitChildren = [createdDock, updatedDock];
+          }else if(splitData.position === "bottom"){
+            newSplitChildren = [updatedDock, createdDock];
+          }
+
+          const createdSplit = {
+            type: "split",
+            orientation: "v",
+            ratio: splittingDock.ratio,
+            children: newSplitChildren
+          }
+
+          const newChildren = [...node.children];
+          newChildren.splice(splittingDockIndex, 1, createdSplit);
+
+          return {
+            ...node,
+            children: newChildren
+          }
+        }
+      }else if(node.orientation === "v"){
+        if(splitData.position === "top" || splitData.position === "bottom"){
+          const dockRatios = splittingDock.ratio / 2;
+          const tabKey = splitData.key;
+          const newTabs = [...new Set(splittingDock.tabs.filter(tab => tab !== tabKey))];
+          const createdDock = {
+            type: 'dock',
+            ratio: dockRatios,
+            tabs: [splitData.key],
+            activeTab: splitData.key
+          }
+          const updatedDock = {
+            ...splittingDock,
+            ratio: dockRatios,
+            tabs: newTabs,
+            activeTab: splittingDock._lastActiveTab || newTabs[newTabs.length - 1],
+            dummyContentSplit: undefined
+          }
+
+          const newChildren = [...node.children];
+          if(splitData.position === "top"){
+            newChildren.splice(splittingDockIndex, 1, createdDock, updatedDock);
+          }else if(splitData.position === "bottom"){
+            newChildren.splice(splittingDockIndex, 1, updatedDock, createdDock);
+          }
+
+          return {
+            ...node,
+            children: newChildren
+          }
+        }else if(splitData.position === "left" || splitData.position === "right"){
+          const dockRatios = 0.5;
+          const createdDock = {
+            type: 'dock',
+            ratio: dockRatios,
+            tabs: [splitData.key],
+            activeTab: splitData.key
+          }
+          
+          const newTabs = [...new Set(splittingDock.tabs.filter(tab => tab !== splitData.key))];
+          const updatedDock = {
+            ...splittingDock,
+            ratio: dockRatios,
+            tabs: newTabs,
+            activeTab: splittingDock._lastActiveTab || newTabs[newTabs.length - 1],
+            dummyContentSplit: undefined
+          }
+
+          let newSplitChildren;
+          if(splitData.position === "left"){
+            newSplitChildren = [createdDock, updatedDock];
+          }else if(splitData.position === "right"){
+            newSplitChildren = [updatedDock, createdDock];
+          }
+
+          const createdSplit = {
+            type: "split",
+            orientation: "h",
+            ratio: splittingDock.ratio,
+            children: newSplitChildren
+          }
+
+          const newChildren = [...node.children];
+          newChildren.splice(splittingDockIndex, 1, createdSplit);
+
+          return {
+            ...node,
+            children: newChildren
+          }
+        }
+      }
+
+      // return {
+      //   ...node,
+      //   tabs: newTabs,
+      //   activeTab: activeTab,
+      //   dummyContentSplit: undefined
+      // }
+      return node;
+    });
+
     return newLayoutDraft;
   }
 
@@ -136,46 +312,31 @@ export const DockTabs = ({
 
   const onMouseUp = React.useCallback(() => {
     if(movingTab){
-      const newLayout = fixupLayout(layout);
-
       setMovingTab(null);
       setMovingTabData(null);
-      onLayoutChange(newLayout);
+      onLayoutChange(fixupLayout(layout));
     }
   }, [movingTab, layout]);
 
   const onMouseMove = React.useCallback((e) => {
-    if(movingTabData && movingTabData.status != "on-header" && dockTabsRef.current){
-      const newPos = {
-        x: e.pageX - dockTabsRef.current.offsetLeft,
-        y: e.pageY - dockTabsRef.current.offsetTop
-      };
-      setMovingTabData({
-        ...movingTabData,
-        position: newPos
-      })
-    }
-  }, [movingTabData])
+    setMovingTabData(movingTabData => {
+      if(movingTabData && movingTabData.status != "on-header" && dockTabsRef.current){
+        const newPos = {
+          x: e.pageX - dockTabsRef.current.offsetLeft,
+          y: e.pageY - dockTabsRef.current.offsetTop
+        };
+        return {
+          ...movingTabData,
+          position: newPos
+        };
+      }
+      return movingTabData;
+    });
+
+  }, [])
 
   const onTabMoveStart = React.useCallback((dockNode, tabKey, newX = 0, handleOffset = {x: 0, y: 0}) => {
-    const newLayoutDraft = { ...layout };
-
-    const findAndReplaceDock = startNode =>
-      findAndReplaceNode(startNode, dockNode, found => {
-        // const newTabs = found.tabs.filter(tabName => tabName != tabKey);
-        return {
-          ...found,
-          // tabs: newTabs,
-          activeTab: tabKey,
-          dummyHeaderTab: {
-            key: tabKey,
-            title: getChildTabWithKey(tabKey)?.props?.title,
-            x: newX - handleOffset.x
-          }
-        };
-      });
-
-    newLayoutDraft.mainArea = findAndReplaceDock(newLayoutDraft.mainArea);
+    
 
     // console.log("MoveStart", layout, newLayoutDraft);
 
@@ -190,30 +351,53 @@ export const DockTabs = ({
       },
       handleOffset
     })
-    setLayout(newLayoutDraft);
-  });
+    setLayout(layout => {
+      const newLayoutDraft = { ...layout };
+
+      if(dockNode.tabs.length === 1){
+        newLayoutDraft.mainArea = findWithCallbackAndReplaceNode(newLayoutDraft.mainArea, (node) => node.type === "split" && node.children != null && node.children.indexOf(dockNode) > -1, node => {
+          const childIndex = node.children.indexOf(dockNode);
+          const newChildren = [...node.children];
+          newChildren.splice(childIndex, 1);
+          const ratioToAdd = dockNode.ratio / newChildren.length;
+          newChildren.forEach(c => c.ratio += ratioToAdd);
+
+
+          return {
+            ...node,
+            children: newChildren
+          }
+          //@TODO: Should be recursive ?
+
+        });
+      }else{
+        const findAndReplaceDock = startNode =>
+          findAndReplaceNode(startNode, dockNode, found => {
+
+            return {
+              ...found,
+              activeTab: tabKey,
+              dummyHeaderTab: {
+                key: tabKey,
+                title: getChildTabWithKey(tabKey)?.props?.title,
+                x: newX - handleOffset.x,
+                moved: false
+              }
+            };
+          });
+
+        newLayoutDraft.mainArea = findAndReplaceDock(newLayoutDraft.mainArea);
+      }
+
+      return newLayoutDraft;
+    });
+  }, [/*layout*/]);
 
   const onMovingTabMovingOnDockHeader = React.useCallback(
     (dockNode, newX) => {
-      // console.log(`${movingTab} moving on header `, dockNode, newX);
+      debugLog(`${movingTab} moving on header `, dockNode, newX);
 
-      const newLayoutDraft = { ...layout };
-
-      const findAndReplaceDock = startNode =>
-        findAndReplaceNode(startNode, dockNode, found => {
-          return {
-            ...found,
-            dummyHeaderTab: {
-              key: movingTabData.key,
-              title: movingTabData.title,
-              x: newX - movingTabData.handleOffset.x
-            }
-          };
-        });
-
-      newLayoutDraft.mainArea = findAndReplaceDock(newLayoutDraft.mainArea);
-
-      // console.log("Moving", layout, newLayoutDraft);
+      
       setMovingTabData({
         ...movingTabData,
         position: {
@@ -221,35 +405,36 @@ export const DockTabs = ({
           x: newX
         }
       });
-      setLayout(newLayoutDraft);
+      setLayout(layout => {
+        const newLayoutDraft = { ...layout };
+
+        const findAndReplaceDock = startNode =>
+          findAndReplaceNode(startNode, dockNode, found => {
+            return {
+              ...found,
+              dummyHeaderTab: {
+                key: movingTabData.key,
+                title: movingTabData.title,
+                x: newX - movingTabData.handleOffset.x,
+                moved: true
+              }
+            };
+          });
+
+        newLayoutDraft.mainArea = findAndReplaceDock(newLayoutDraft.mainArea);
+
+        // console.log("Moving", layout, newLayoutDraft);
+
+        return newLayoutDraft
+      });
     },
-    [movingTab, movingTabData, layout]
+    [movingTab, movingTabData/*, layout*/]
   );
 
   const onMovingTabEnteringDockHeader = React.useCallback(
     (dockNode, newX = 0) => {
-      // console.log(`${movingTab} entering header of `, dockNode);
+      debugLog(`${movingTab} entering header of `, dockNode);
 
-      const newLayoutDraft = { ...layout };
-
-      const findAndReplaceDock = startNode =>
-        findAndReplaceNode(startNode, dockNode, found => {
-          return {
-            ...found,
-            tabs: [...new Set([...found.tabs, movingTab])],
-            activeTab: movingTab,
-            _lastActiveTab: found.activeTab,
-            dummyHeaderTab: {
-              key: movingTab,
-              title: getChildTabWithKey(movingTab)?.props?.title,
-              x: newX - movingTabData.handleOffset.x
-            }
-          };
-        });
-
-      newLayoutDraft.mainArea = findAndReplaceDock(newLayoutDraft.mainArea);
-
-      // console.log("Entering", layout, newLayoutDraft);
       setMovingTabData({
         ...movingTabData,
         status: "on-header",
@@ -258,46 +443,160 @@ export const DockTabs = ({
           x: newX
         }
       });
-      setLayout(newLayoutDraft);
+      setLayout(layout => {
+        const newLayoutDraft = { ...layout };
+
+        const findAndReplaceDock = startNode =>
+          findAndReplaceNode(startNode, dockNode, found => {
+            console.log("Entering dock => found")
+            return {
+              ...found,
+              tabs: [...new Set([...found.tabs, movingTab])],
+              activeTab: movingTab,
+              _lastActiveTab: found.activeTab,
+              dummyHeaderTab: {
+                key: movingTab,
+                title: getChildTabWithKey(movingTab)?.props?.title,
+                x: newX - movingTabData.handleOffset.x
+              }
+            };
+          });
+
+        newLayoutDraft.mainArea = findAndReplaceDock(newLayoutDraft.mainArea);
+
+        // console.log("Entering", layout, newLayoutDraft);
+
+        return newLayoutDraft;
+      });
     },
-    [movingTab, movingTabData, layout]
+    [movingTab, movingTabData/*, layout*/]
   );
 
   const onMovingTabLeavingDockHeader = React.useCallback(
     dockNode => {
-      // console.log(`${movingTab} leaving header of `, dockNode);
+      debugLog(`${movingTab} leaving header of `, dockNode);
 
-      const newLayoutDraft = { ...layout };
-
-      const findAndReplaceDock = startNode =>
-        findAndReplaceNode(startNode, dockNode, found => {
-          const newTabs = found.tabs.filter(tabName => tabName != movingTab);
-          return {
-            ...found,
-            tabs: newTabs,
-            activeTab: found._lastActiveTab || newTabs[newTabs.length - 1],
-            _lastActiveTab: undefined,
-            dummyHeaderTab: undefined
-          };
-        });
-
-      newLayoutDraft.mainArea = findAndReplaceDock(newLayoutDraft.mainArea);
-
-      // console.log("Leaving", layout, newLayoutDraft);
+      
       setMovingTabData({
         ...movingTabData,
         status: "floating"
       });
-      setLayout(newLayoutDraft);
+      setLayout(layout => {
+        const newLayoutDraft = { ...layout };
+
+        const findAndReplaceDock = startNode =>
+          findAndReplaceNode(startNode, dockNode, found => {
+            const newTabs = found.tabs.filter(tabName => tabName != movingTab);
+            return {
+              ...found,
+              tabs: newTabs,
+              activeTab: found._lastActiveTab || newTabs[newTabs.length - 1],
+              _lastActiveTab: undefined,
+              dummyHeaderTab: undefined
+            };
+          });
+
+        newLayoutDraft.mainArea = findAndReplaceDock(newLayoutDraft.mainArea);
+
+        // console.log("Leaving", layout, newLayoutDraft);
+
+        return newLayoutDraft;
+      });
     },
-    [movingTab, movingTabData, layout]
+    [movingTab, movingTabData/*, layout*/]
   );
 
   const onMovingTabEnteringDockContent = React.useCallback(
     dockNode => {
-      // console.log(`${movingTab} entering content of `, dockNode);
+      debugLog(`${movingTab} entering content of `, dockNode, movingTabData);
+
+      setMovingTabData({
+        ...movingTabData,
+        status: "on-content",
+        positionOnContent: "center"
+      });
+      setLayout(layout => {
+        const newLayoutDraft = { ...layout };
+
+        const findAndReplaceDock = startNode =>
+          findAndReplaceNode(startNode, dockNode, found => {
+            return {
+              ...found,
+              dummyContentSplit: {
+                key: movingTabData.key,
+                position: "center"
+              }
+            };
+          });
+
+        newLayoutDraft.mainArea = findAndReplaceDock(newLayoutDraft.mainArea);
+        
+        return newLayoutDraft
+      });
     },
-    [movingTab, layout]
+    [movingTab, movingTabData/*, layout*/]
+  );
+
+  const onMovingTabMovingOnDockContent = React.useCallback(
+    (dockNode, positionOnContent) => {
+      debugLog(`${movingTab} moving over content of `, dockNode, movingTabData);
+      
+      setMovingTabData({
+        ...movingTabData,
+        status: "on-content",
+        positionOnContent
+      });
+      setLayout(layout => {
+        const newLayoutDraft = { ...layout };
+
+        const findAndReplaceDock = startNode =>
+          findAndReplaceNode(startNode, dockNode, found => {
+            return {
+              ...found,
+              dummyContentSplit: {
+                ...found.dummyContentSplit,
+                key: movingTabData.key,
+                position: positionOnContent
+              }
+            };
+          });
+
+        newLayoutDraft.mainArea = findAndReplaceDock(newLayoutDraft.mainArea);
+
+        return newLayoutDraft
+      });
+    },
+    [movingTab, movingTabData]
+  );
+
+  const onMovingTabLeavingDockContent = React.useCallback(
+    dockNode => {
+      debugLog(`${movingTab} leaving content of `, dockNode);
+
+      
+      
+      setMovingTabData({
+        ...movingTabData,
+        status: "floating",
+        positionOnContent: undefined
+      });
+      setLayout(layout => {
+        const newLayoutDraft = { ...layout };
+
+        const findAndReplaceDock = startNode =>
+          findAndReplaceNode(startNode, dockNode, found => {
+            return {
+              ...found,
+              dummyContentSplit: undefined
+            };
+          });
+
+        newLayoutDraft.mainArea = findAndReplaceDock(newLayoutDraft.mainArea);
+
+        return newLayoutDraft;
+      });
+    },
+    [movingTab, movingTabData/*, layout*/]
   );
 
   const drawLayoutNode = layoutNode => {
@@ -330,13 +629,11 @@ export const DockTabs = ({
           activeTabKey={layoutNode.activeTab || layoutNode.tabs[0]}
           setTabActive={tab => setTabActive(layoutNode, tab)}
           closeTab={tab => closeTab(layoutNode, tab)}
-          onTabMoveStart={(tabKey, newX, handleOffset) => onTabMoveStart(layoutNode, tabKey, newX, handleOffset)}
-          movingTab={movingTab}
+
+          onTabMoveStart={(tabKey, newX, handleOffset) => onTabMoveStart(layoutNode, tabKey, newX, handleOffset)} 
+
           onMovingTabEnteringHeader={(newX) =>
             onMovingTabEnteringDockHeader(layoutNode, newX)
-          }
-          onMovingTabEnteringContent={() =>
-            onMovingTabEnteringDockContent(layoutNode)
           }
           onMovingTabLeavingHeader={() =>
             onMovingTabLeavingDockHeader(layoutNode)
@@ -345,7 +642,19 @@ export const DockTabs = ({
             onMovingTabMovingOnDockHeader(layoutNode, newX)
           }
 
+          onMovingTabEnteringContent={() =>
+            onMovingTabEnteringDockContent(layoutNode)
+          }
+          onMovingTabMovingOnContent={(positionOnContent) =>
+            onMovingTabMovingOnDockContent(layoutNode, positionOnContent)
+          }
+          onMovingTabLeavingContent={() =>
+            onMovingTabLeavingDockContent(layoutNode)
+          }
+
+          movingTab={movingTab}
           dummyHeaderTab={layoutNode.dummyHeaderTab}
+          dummyContentSplit={layoutNode.dummyContentSplit}
         />
       );
     } else {

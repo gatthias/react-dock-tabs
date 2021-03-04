@@ -1,5 +1,6 @@
 .dock {
   display: flex;
+  position: relative;
   flex-direction: column;
   justify-content: stretch;
   align-items: stretch;
@@ -32,7 +33,8 @@
   background: none;
 }
 
-.tab-btn.dummy {
+.tab-btn.dummy,
+.dock.moving-tab .tab-btn {
   pointer-events: none;
 }
 
@@ -85,4 +87,49 @@
 
 .dock-content {
   flex-grow: 1;
+}
+
+.dummy-content-split {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(36, 36, 36, 0.356);
+}
+
+.dummy-content-split.center {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+.dummy-content-split.top {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
+}
+.dummy-content-split.bottom {
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
+}
+.dummy-content-split.left {
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+}
+.dummy-content-split.right {
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 100%;
+}
+
+.tab {
+  width: 100%;
+  height: 100%;
+  background: #444444;
+  padding: 7px;
+  color: #eaeaea;
 }

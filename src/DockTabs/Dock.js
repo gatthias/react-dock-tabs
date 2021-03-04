@@ -16,9 +16,11 @@ export const Dock = ({
   onMovingTabMovingOnHeader,
   onMovingTabEnteringContent,
   onMovingTabLeavingHeader,
+  onMovingTabMovingOnContent,
   onMovingTabLeavingContent,
 
   dummyHeaderTab,
+  dummyContentSplit,
 
   tabBtnWidth = 90
 }) => {
@@ -43,56 +45,85 @@ export const Dock = ({
   }
 
   const headerRef = React.useRef();
+  const contentRef = React.useRef();
 
   const mouseDown = React.useCallback((e, tabKey) => {
-    const newX = e.pageX - headerRef.current.offsetLeft;
+    const newX = e.currentTarget.offsetLeft;
     const handleOffset = {
       x: e.nativeEvent.offsetX,
       y: e.nativeEvent.offsetY
     }
-    onTabMoveStart(tabKey, newX, handleOffset);
+    onTabMoveStart(tabKey, newX + handleOffset.x, handleOffset);
   });
 
   const mouseEnterHeader = React.useCallback((e) => {
     if (movingTab != null && headerRef.current != null) {
-      const newX = e.pageX - headerRef.current.offsetLeft;
+      const newX =  e.nativeEvent.offsetX;
       onMovingTabEnteringHeader && onMovingTabEnteringHeader(newX);
     }
-  }, [movingTab, tabs]);
+  }, [movingTab, tabs, onMovingTabEnteringHeader]);
 
   const mouseMoveHeader = React.useCallback((e) => {
     if (movingTab != null && headerRef.current != null && dummyHeaderTab) {
-      const newX = e.pageX - headerRef.current.offsetLeft;
+      const newX = e.nativeEvent.offsetX;
       onMovingTabMovingOnHeader && onMovingTabMovingOnHeader(newX);
     }
-  }, [movingTab, tabs, dummyHeaderTab]);
+  }, [movingTab, tabs, dummyHeaderTab, onMovingTabMovingOnHeader]);
 
   const mouseLeaveHeader = React.useCallback(() => {
     if (movingTab != null) {
       onMovingTabLeavingHeader && onMovingTabLeavingHeader();
     }
-  }, [movingTab, tabs]);
+  }, [movingTab, tabs, onMovingTabLeavingHeader]);
 
   const mouseEnterContent = React.useCallback(() => {
     if (movingTab != null) {
       onMovingTabEnteringContent && onMovingTabEnteringContent();
     }
-  }, [movingTab, tabs]);
+  }, [movingTab, tabs, onMovingTabEnteringContent]);
+
+  const mouseMoveContent = React.useCallback((e) => {
+    if(movingTab != null && contentRef.current != null){
+      let contentPosition = "center";
+      const tabX = e.nativeEvent.offsetX;
+      const tabY = e.nativeEvent.offsetY;
+
+      const dockWidth = contentRef.current.offsetWidth;
+      const dockHeight = contentRef.current.offsetHeight;
+
+      const marginRatio = 0.33;
+      const marginX = dockWidth * marginRatio;
+      const marginY = dockHeight * marginRatio;
+      
+      if(tabY < marginY){
+        contentPosition = "top";
+      }else if(tabY > dockHeight - marginY){
+        contentPosition = "bottom";
+      }else if(tabX < marginX){
+        contentPosition = "left";
+      }else if(tabX > dockWidth - marginX){
+        contentPosition = "right";
+      }
+
+      onMovingTabMovingOnContent && onMovingTabMovingOnContent(contentPosition)
+    }
+  }, [movingTab, tabs, onMovingTabMovingOnContent])
 
   const mouseLeaveContent = React.useCallback(() => {
     if (movingTab != null) {
       onMovingTabLeavingContent && onMovingTabLeavingContent();
     }
-  }, [movingTab, tabs]);
+  }, [movingTab, tabs, onMovingTabLeavingContent]);
+
+  const getDummyContentSplitClassName = (dummy) => dummy?.position || "center";
 
   return (
-    <div className="dock" data-dt-dock>
+    <div className={ `dock ${ movingTab ? 'moving-tab' : ''}`}>
       <div
         className="dock-header"
-        data-dt-dock-header
         onMouseEnter={mouseEnterHeader}
-        onMouseLeave={mouseLeaveHeader}
         onMouseMove={mouseMoveHeader}
+        onMouseLeave={mouseLeaveHeader}
         ref={headerRef}
       >
         {displayTabs.map(tab => (
@@ -130,12 +161,16 @@ export const Dock = ({
       </div>
       <div
         className="dock-content"
-        data-dt-dock-content
         onMouseEnter={mouseEnterContent}
+        onMouseMove={mouseMoveContent}
         onMouseLeave={mouseLeaveContent}
+        ref={contentRef}
       >
         {activeTab}
       </div>
+      { dummyContentSplit && (
+        <div className={`dummy-content-split ${getDummyContentSplitClassName(dummyContentSplit)}`} />
+      )}
     </div>
   );
 };
