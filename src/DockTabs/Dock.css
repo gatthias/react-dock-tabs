@@ -42,6 +42,7 @@
 
 .tab-btn-title {
   color: #777;
+  pointer-events: none;
 }
 
 .tab-btn.active .tab-btn-title {

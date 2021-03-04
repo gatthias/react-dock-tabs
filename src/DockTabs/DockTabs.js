@@ -23,6 +23,8 @@ export const DockTabs = ({
 
   const [layout, setLayout] = React.useState(initialLayout);
   const [movingTab, setMovingTab] = React.useState(null);
+  const [movingTabData, setMovingTabData] = React.useState(null);
+  const dockTabsRef = React.useRef();
 
   React.useEffect(() => {
     setLayout(initialLayout);
@@ -130,44 +132,45 @@ export const DockTabs = ({
     },
     [layout, onLayoutChange]
   );
-
-  const onTabMoving = React.useCallback((dragEvent, tabKey) => {
-    // console.log(dragEvent, tabKey);
-    const target = dragEvent.target;
-    let $dock;
-    if (($dock = target.closest("[data-dt-dock]"))) {
-      let $header, $content;
-      if (($header = target.closest("[data-dt-dock-header]"))) {
-        console.log("On Dock Header !", $header);
-      } else if (($content = target.closest("[data-dt-dock-content]"))) {
-        console.log("On Dock Content !", $content);
-      }
-    }
-  });
+  
 
   const onMouseUp = React.useCallback(() => {
     if(movingTab){
       const newLayout = fixupLayout(layout);
 
       setMovingTab(null);
+      setMovingTabData(null);
       onLayoutChange(newLayout);
     }
-  }, [movingTab, layout])
+  }, [movingTab, layout]);
 
-  const onTabMoveStart = React.useCallback((dockNode, tabKey, newX = 0) => {
+  const onMouseMove = React.useCallback((e) => {
+    if(movingTabData && movingTabData.status != "on-header" && dockTabsRef.current){
+      const newPos = {
+        x: e.pageX - dockTabsRef.current.offsetLeft,
+        y: e.pageY - dockTabsRef.current.offsetTop
+      };
+      setMovingTabData({
+        ...movingTabData,
+        position: newPos
+      })
+    }
+  }, [movingTabData])
+
+  const onTabMoveStart = React.useCallback((dockNode, tabKey, newX = 0, handleOffset = {x: 0, y: 0}) => {
     const newLayoutDraft = { ...layout };
 
     const findAndReplaceDock = startNode =>
       findAndReplaceNode(startNode, dockNode, found => {
-        const newTabs = found.tabs.filter(tabName => tabName != tabKey);
+        // const newTabs = found.tabs.filter(tabName => tabName != tabKey);
         return {
           ...found,
           // tabs: newTabs,
           activeTab: tabKey,
           dummyHeaderTab: {
             key: tabKey,
-            title: getChildTabWithKey(tabKey, dockNode)?.props?.title,
-            x: newX
+            title: getChildTabWithKey(tabKey)?.props?.title,
+            x: newX - handleOffset.x
           }
         };
       });
@@ -177,6 +180,16 @@ export const DockTabs = ({
     // console.log("MoveStart", layout, newLayoutDraft);
 
     setMovingTab(tabKey);
+    setMovingTabData({
+      key: tabKey,
+      title: getChildTabWithKey(tabKey)?.props?.title,
+      status: "on-header",
+      position: {
+        x: newX,
+        y: 0
+      },
+      handleOffset
+    })
     setLayout(newLayoutDraft);
   });
 
@@ -191,9 +204,9 @@ export const DockTabs = ({
           return {
             ...found,
             dummyHeaderTab: {
-              key: movingTab,
-              title: getChildTabWithKey(movingTab, dockNode)?.props?.title,
-              x: newX
+              key: movingTabData.key,
+              title: movingTabData.title,
+              x: newX - movingTabData.handleOffset.x
             }
           };
         });
@@ -201,10 +214,16 @@ export const DockTabs = ({
       newLayoutDraft.mainArea = findAndReplaceDock(newLayoutDraft.mainArea);
 
       // console.log("Moving", layout, newLayoutDraft);
-
+      setMovingTabData({
+        ...movingTabData,
+        position: {
+          ...movingTabData.position,
+          x: newX
+        }
+      });
       setLayout(newLayoutDraft);
     },
-    [movingTab, layout]
+    [movingTab, movingTabData, layout]
   );
 
   const onMovingTabEnteringDockHeader = React.useCallback(
@@ -222,8 +241,8 @@ export const DockTabs = ({
             _lastActiveTab: found.activeTab,
             dummyHeaderTab: {
               key: movingTab,
-              title: getChildTabWithKey(movingTab, dockNode)?.props?.title,
-              x: newX
+              title: getChildTabWithKey(movingTab)?.props?.title,
+              x: newX - movingTabData.handleOffset.x
             }
           };
         });
@@ -231,10 +250,17 @@ export const DockTabs = ({
       newLayoutDraft.mainArea = findAndReplaceDock(newLayoutDraft.mainArea);
 
       // console.log("Entering", layout, newLayoutDraft);
-
+      setMovingTabData({
+        ...movingTabData,
+        status: "on-header",
+        position: {
+          ...movingTabData.position,
+          x: newX
+        }
+      });
       setLayout(newLayoutDraft);
     },
-    [movingTab, layout]
+    [movingTab, movingTabData, layout]
   );
 
   const onMovingTabLeavingDockHeader = React.useCallback(
@@ -258,10 +284,13 @@ export const DockTabs = ({
       newLayoutDraft.mainArea = findAndReplaceDock(newLayoutDraft.mainArea);
 
       // console.log("Leaving", layout, newLayoutDraft);
-
+      setMovingTabData({
+        ...movingTabData,
+        status: "floating"
+      });
       setLayout(newLayoutDraft);
     },
-    [movingTab, layout]
+    [movingTab, movingTabData, layout]
   );
 
   const onMovingTabEnteringDockContent = React.useCallback(
@@ -301,8 +330,7 @@ export const DockTabs = ({
           activeTabKey={layoutNode.activeTab || layoutNode.tabs[0]}
           setTabActive={tab => setTabActive(layoutNode, tab)}
           closeTab={tab => closeTab(layoutNode, tab)}
-          onTabMoveStart={(tabKey, newX) => onTabMoveStart(layoutNode, tabKey, newX)}
-          onTabMoving={onTabMoving}
+          onTabMoveStart={(tabKey, newX, handleOffset) => onTabMoveStart(layoutNode, tabKey, newX, handleOffset)}
           movingTab={movingTab}
           onMovingTabEnteringHeader={(newX) =>
             onMovingTabEnteringDockHeader(layoutNode, newX)
@@ -326,8 +354,19 @@ export const DockTabs = ({
   };
 
   return (
-    <div className="dock-tabs" onMouseUp={onMouseUp}>
+    <div className="dock-tabs" ref={dockTabsRef} onMouseUp={onMouseUp} onMouseMove={onMouseMove}>
       { drawLayoutNode(layout.mainArea) }
+      { movingTabData && movingTabData.status !== "on-header" && (
+        <div
+          className="tab-btn active dummy floating-handle"
+          style={({position: "absolute", top: 0, left: 0, transform: `translate(${movingTabData.position.x}px, ${movingTabData.position.y}px)` }) }
+        >
+          <span className="tab-btn-title">{movingTabData.title || movingTabData.key}</span>
+          <button className="tab-btn-close">
+            x
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -8,8 +8,7 @@ export const Dock = ({
   children,
   setTabActive,
   closeTab,
-  onTabMoving,
-  onTabMoved,
+
   onTabMoveStart,
   movingTab,
 
@@ -47,7 +46,11 @@ export const Dock = ({
 
   const mouseDown = React.useCallback((e, tabKey) => {
     const newX = e.pageX - headerRef.current.offsetLeft;
-    onTabMoveStart(tabKey, newX);
+    const handleOffset = {
+      x: e.nativeEvent.offsetX,
+      y: e.nativeEvent.offsetY
+    }
+    onTabMoveStart(tabKey, newX, handleOffset);
   });
 
   const mouseEnterHeader = React.useCallback((e) => {
