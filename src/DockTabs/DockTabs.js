@@ -29,6 +29,7 @@ export const DockTabs = ({
   }, [initialLayout]);
 
   const childTabs = (childrenArr || []).filter(c => c.type === Tab);
+  const tabBtnWidth = 90;
 
   const getChildTabWithKey = key => {
     for (let tab of childTabs) {
@@ -40,22 +41,47 @@ export const DockTabs = ({
     return null;
   };
 
-  const findAndReplaceNode = (currentNode, nodeToFind, replacer) => {
-    if (currentNode === nodeToFind) {
+  const findWithCallbackAndReplaceNode = (currentNode, findCallback, replacer) => {
+    if (findCallback(currentNode)) {
       return replacer(currentNode);
     } else {
       if (currentNode.children) {
         return {
           ...currentNode,
           children: currentNode.children.map(node =>
-            findAndReplaceNode(node, nodeToFind, replacer)
+            findWithCallbackAndReplaceNode(node, findCallback, replacer)
           )
         };
       } else {
         return currentNode;
       }
     }
+  }
+
+  const findAndReplaceNode = (currentNode, nodeToFind, replacer) => {
+    return findWithCallbackAndReplaceNode(currentNode, (node) => node === nodeToFind, replacer);
   };
+
+  const fixupLayout = (layout) => {
+    const newLayoutDraft = { ...layout };
+
+    newLayoutDraft.mainArea = findWithCallbackAndReplaceNode(newLayoutDraft.mainArea, (node) => node.type === "dock" && node.dummyHeaderTab != null, node => {
+      const tabKey = node.dummyHeaderTab.key;
+      const newTabs = [...new Set(node.tabs.filter(tab => tab !== tabKey))];
+      const dummyX = node.dummyHeaderTab.x || 0;
+      const dummyTabIdx = Math.floor(dummyX / tabBtnWidth);
+      newTabs.splice(dummyTabIdx, 0, tabKey);
+      return {
+        ...node,
+        tabs: newTabs,
+        _lastActiveTab: node.activeTab,
+        activeTab: tabKey,
+        dummyHeaderTab: undefined
+      }
+    });
+
+    return newLayoutDraft;
+  }
 
   const setTabActive = React.useCallback(
     (dock, tab) => {
@@ -119,41 +145,44 @@ export const DockTabs = ({
     }
   });
 
-  const onTabMoveStart = React.useCallback((dockNode, tabKey) => {
-    const onEnd = endEvent => {
+  const onMouseUp = React.useCallback(() => {
+    if(movingTab){
+      const newLayout = fixupLayout(layout);
+
       setMovingTab(null);
+      onLayoutChange(newLayout);
+    }
+  }, [movingTab, layout])
 
-      window.removeEventListener("mouseup", onEnd);
-    };
-
-    window.addEventListener("mouseup", onEnd);
-
-    setMovingTab(tabKey);
-
+  const onTabMoveStart = React.useCallback((dockNode, tabKey, newX = 0) => {
     const newLayoutDraft = { ...layout };
 
     const findAndReplaceDock = startNode =>
       findAndReplaceNode(startNode, dockNode, found => {
-        const tabIdx = found.tabs.indexOf(tabKey);
+        const newTabs = found.tabs.filter(tabName => tabName != tabKey);
         return {
           ...found,
-          tabs: [
-            ...found.tabs.slice(0, tabIdx),
-            ...found.tabs.slice(tabIdx + 1)
-          ]
+          // tabs: newTabs,
+          activeTab: tabKey,
+          dummyHeaderTab: {
+            key: tabKey,
+            title: getChildTabWithKey(tabKey, dockNode)?.props?.title,
+            x: newX
+          }
         };
       });
 
     newLayoutDraft.mainArea = findAndReplaceDock(newLayoutDraft.mainArea);
 
-    console.log("Leaving", layout, newLayoutDraft);
+    // console.log("MoveStart", layout, newLayoutDraft);
 
+    setMovingTab(tabKey);
     setLayout(newLayoutDraft);
   });
 
-  const onMovingTabEnteringDockHeader = React.useCallback(
-    dockNode => {
-      console.log(`${movingTab} entering header of `, dockNode);
+  const onMovingTabMovingOnDockHeader = React.useCallback(
+    (dockNode, newX) => {
+      // console.log(`${movingTab} moving on header `, dockNode, newX);
 
       const newLayoutDraft = { ...layout };
 
@@ -161,13 +190,47 @@ export const DockTabs = ({
         findAndReplaceNode(startNode, dockNode, found => {
           return {
             ...found,
-            tabs: [...found.tabs, movingTab]
+            dummyHeaderTab: {
+              key: movingTab,
+              title: getChildTabWithKey(movingTab, dockNode)?.props?.title,
+              x: newX
+            }
           };
         });
 
       newLayoutDraft.mainArea = findAndReplaceDock(newLayoutDraft.mainArea);
 
-      console.log("Entering", layout, newLayoutDraft);
+      // console.log("Moving", layout, newLayoutDraft);
+
+      setLayout(newLayoutDraft);
+    },
+    [movingTab, layout]
+  );
+
+  const onMovingTabEnteringDockHeader = React.useCallback(
+    (dockNode, newX = 0) => {
+      // console.log(`${movingTab} entering header of `, dockNode);
+
+      const newLayoutDraft = { ...layout };
+
+      const findAndReplaceDock = startNode =>
+        findAndReplaceNode(startNode, dockNode, found => {
+          return {
+            ...found,
+            tabs: [...new Set([...found.tabs, movingTab])],
+            activeTab: movingTab,
+            _lastActiveTab: found.activeTab,
+            dummyHeaderTab: {
+              key: movingTab,
+              title: getChildTabWithKey(movingTab, dockNode)?.props?.title,
+              x: newX
+            }
+          };
+        });
+
+      newLayoutDraft.mainArea = findAndReplaceDock(newLayoutDraft.mainArea);
+
+      // console.log("Entering", layout, newLayoutDraft);
 
       setLayout(newLayoutDraft);
     },
@@ -176,25 +239,25 @@ export const DockTabs = ({
 
   const onMovingTabLeavingDockHeader = React.useCallback(
     dockNode => {
-      console.log(`${movingTab} leaving header of `, dockNode);
+      // console.log(`${movingTab} leaving header of `, dockNode);
 
       const newLayoutDraft = { ...layout };
 
       const findAndReplaceDock = startNode =>
         findAndReplaceNode(startNode, dockNode, found => {
-          const tabIdx = found.tabs.indexOf(movingTab);
+          const newTabs = found.tabs.filter(tabName => tabName != movingTab);
           return {
             ...found,
-            tabs: [
-              ...found.tabs.slice(0, tabIdx),
-              ...found.tabs.slice(tabIdx + 1)
-            ]
+            tabs: newTabs,
+            activeTab: found._lastActiveTab || newTabs[newTabs.length - 1],
+            _lastActiveTab: undefined,
+            dummyHeaderTab: undefined
           };
         });
 
       newLayoutDraft.mainArea = findAndReplaceDock(newLayoutDraft.mainArea);
 
-      console.log("Leaving", layout, newLayoutDraft);
+      // console.log("Leaving", layout, newLayoutDraft);
 
       setLayout(newLayoutDraft);
     },
@@ -203,7 +266,7 @@ export const DockTabs = ({
 
   const onMovingTabEnteringDockContent = React.useCallback(
     dockNode => {
-      console.log(`${movingTab} entering content of `, dockNode);
+      // console.log(`${movingTab} entering content of `, dockNode);
     },
     [movingTab, layout]
   );
@@ -238,11 +301,11 @@ export const DockTabs = ({
           activeTabKey={layoutNode.activeTab || layoutNode.tabs[0]}
           setTabActive={tab => setTabActive(layoutNode, tab)}
           closeTab={tab => closeTab(layoutNode, tab)}
-          onTabMoveStart={tabKey => onTabMoveStart(layoutNode, tabKey)}
+          onTabMoveStart={(tabKey, newX) => onTabMoveStart(layoutNode, tabKey, newX)}
           onTabMoving={onTabMoving}
           movingTab={movingTab}
-          onMovingTabEnteringHeader={() =>
-            onMovingTabEnteringDockHeader(layoutNode)
+          onMovingTabEnteringHeader={(newX) =>
+            onMovingTabEnteringDockHeader(layoutNode, newX)
           }
           onMovingTabEnteringContent={() =>
             onMovingTabEnteringDockContent(layoutNode)
@@ -250,6 +313,11 @@ export const DockTabs = ({
           onMovingTabLeavingHeader={() =>
             onMovingTabLeavingDockHeader(layoutNode)
           }
+          onMovingTabMovingOnHeader={(newX) =>
+            onMovingTabMovingOnDockHeader(layoutNode, newX)
+          }
+
+          dummyHeaderTab={layoutNode.dummyHeaderTab}
         />
       );
     } else {
@@ -257,5 +325,9 @@ export const DockTabs = ({
     }
   };
 
-  return drawLayoutNode(layout.mainArea);
+  return (
+    <div className="dock-tabs" onMouseUp={onMouseUp}>
+      { drawLayoutNode(layout.mainArea) }
+    </div>
+  );
 };

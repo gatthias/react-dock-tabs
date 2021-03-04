@@ -24,7 +24,16 @@
   border-top-left-radius: 3px;
   border-top-right-radius: 3px;
   height: 32px;
+  width: 90px;
   user-select: none;
+}
+
+.tab-btn.placeholder {
+  background: none;
+}
+
+.tab-btn.dummy {
+  pointer-events: none;
 }
 
 .tab-btn.active {
