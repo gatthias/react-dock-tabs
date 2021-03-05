@@ -107,8 +107,10 @@ export const DockTabs = ({
           ...node,
           children: newChildren
         }
-      }else if(node.orientation === "h"){
-        if(splitData.position === "left" || splitData.position === "right"){
+      }else{
+        const bMainAxis = (node.orientation === "h" && (splitData.position === "left" || splitData.position === "right")) || (node.orientation === "v" && (splitData.position === "top" || splitData.position === "bottom"))
+      
+        if(bMainAxis){
           const dockRatios = splittingDock.ratio / 2;
           const createdDock = {
             type: 'dock',
@@ -127,9 +129,10 @@ export const DockTabs = ({
           }
 
           const newChildren = [...node.children];
-          if(splitData.position === "left"){
+
+          if(splitData.position === "left" || splitData.position === "top"){
             newChildren.splice(splittingDockIndex, 1, createdDock, updatedDock);
-          }else if(splitData.position === "right"){
+          }else if(splitData.position === "right" || splitData.position === "bottom"){
             newChildren.splice(splittingDockIndex, 1, updatedDock, createdDock);
           }
 
@@ -137,7 +140,7 @@ export const DockTabs = ({
             ...node,
             children: newChildren
           }
-        }else if(splitData.position === "top" || splitData.position === "bottom"){
+        }else{
           const dockRatios = 0.5;
           const createdDock = {
             type: 'dock',
@@ -156,85 +159,15 @@ export const DockTabs = ({
           }
 
           let newSplitChildren;
-          if(splitData.position === "top"){
+          if(splitData.position === "left" || splitData.position === "top"){
             newSplitChildren = [createdDock, updatedDock];
-          }else if(splitData.position === "bottom"){
+          }else if(splitData.position === "right" || splitData.position === "bottom"){
             newSplitChildren = [updatedDock, createdDock];
           }
 
           const createdSplit = {
             type: "split",
-            orientation: "v",
-            ratio: splittingDock.ratio,
-            children: newSplitChildren
-          }
-
-          const newChildren = [...node.children];
-          newChildren.splice(splittingDockIndex, 1, createdSplit);
-
-          return {
-            ...node,
-            children: newChildren
-          }
-        }
-      }else if(node.orientation === "v"){
-        if(splitData.position === "top" || splitData.position === "bottom"){
-          const dockRatios = splittingDock.ratio / 2;
-          const tabKey = splitData.key;
-          const newTabs = [...new Set(splittingDock.tabs.filter(tab => tab !== tabKey))];
-          const createdDock = {
-            type: 'dock',
-            ratio: dockRatios,
-            tabs: [splitData.key],
-            activeTab: splitData.key
-          }
-          const updatedDock = {
-            ...splittingDock,
-            ratio: dockRatios,
-            tabs: newTabs,
-            activeTab: splittingDock._lastActiveTab || newTabs[newTabs.length - 1],
-            dummyContentSplit: undefined
-          }
-
-          const newChildren = [...node.children];
-          if(splitData.position === "top"){
-            newChildren.splice(splittingDockIndex, 1, createdDock, updatedDock);
-          }else if(splitData.position === "bottom"){
-            newChildren.splice(splittingDockIndex, 1, updatedDock, createdDock);
-          }
-
-          return {
-            ...node,
-            children: newChildren
-          }
-        }else if(splitData.position === "left" || splitData.position === "right"){
-          const dockRatios = 0.5;
-          const createdDock = {
-            type: 'dock',
-            ratio: dockRatios,
-            tabs: [splitData.key],
-            activeTab: splitData.key
-          }
-          
-          const newTabs = [...new Set(splittingDock.tabs.filter(tab => tab !== splitData.key))];
-          const updatedDock = {
-            ...splittingDock,
-            ratio: dockRatios,
-            tabs: newTabs,
-            activeTab: splittingDock._lastActiveTab || newTabs[newTabs.length - 1],
-            dummyContentSplit: undefined
-          }
-
-          let newSplitChildren;
-          if(splitData.position === "left"){
-            newSplitChildren = [createdDock, updatedDock];
-          }else if(splitData.position === "right"){
-            newSplitChildren = [updatedDock, createdDock];
-          }
-
-          const createdSplit = {
-            type: "split",
-            orientation: "h",
+            orientation: node.orientation === "h" ? "v" : "h",
             ratio: splittingDock.ratio,
             children: newSplitChildren
           }
@@ -248,14 +181,6 @@ export const DockTabs = ({
           }
         }
       }
-
-      // return {
-      //   ...node,
-      //   tabs: newTabs,
-      //   activeTab: activeTab,
-      //   dummyContentSplit: undefined
-      // }
-      return node;
     });
 
     return newLayoutDraft;
