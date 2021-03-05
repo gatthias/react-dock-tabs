@@ -1,5 +1,9 @@
 {
-  "name": "react",
+  "name": "react-dock-tabs",
+  "author": {
+    "name": "Matthias Gaudin",
+    "url": "https://github.com/gatthias"
+  },
   "version": "0.0.0",
   "private": true,
   "dependencies": {
