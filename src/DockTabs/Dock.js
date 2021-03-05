@@ -12,12 +12,8 @@ export const Dock = ({
   onTabMoveStart,
   movingTab,
 
-  onMovingTabEnteringHeader,
-  onMovingTabMovingOnHeader,
-  onMovingTabEnteringContent,
-  onMovingTabLeavingHeader,
-  onMovingTabMovingOnContent,
-  onMovingTabLeavingContent,
+  dispatch,
+  dockNode,
 
   dummyHeaderTab,
   dummyContentSplit,
@@ -33,7 +29,6 @@ export const Dock = ({
     _tabs = [children].filter(c => c.type === Tab);
   }
 
-  // const tabBtnWidth = 90;
   const activeTab = _tabs.filter(tab => tab.key === activeTabKey)[0];
   let displayTabs = _tabs;
   if(dummyHeaderTab){
@@ -59,28 +54,28 @@ export const Dock = ({
   const mouseEnterHeader = React.useCallback((e) => {
     if (movingTab != null && headerRef.current != null) {
       const newX =  e.nativeEvent.offsetX;
-      onMovingTabEnteringHeader && onMovingTabEnteringHeader(newX);
+      dispatch(["tabEnteringDockHeader", { dockNode, newX, tabTitle: movingTab.title }]);
     }
-  }, [movingTab, tabs, onMovingTabEnteringHeader]);
+  }, [movingTab, dockNode]);
 
   const mouseMoveHeader = React.useCallback((e) => {
     if (movingTab != null && headerRef.current != null && dummyHeaderTab) {
       const newX = e.nativeEvent.offsetX;
-      onMovingTabMovingOnHeader && onMovingTabMovingOnHeader(newX);
+      dispatch(["tabMovingOnHeader", { dockNode, newX }]);
     }
-  }, [movingTab, tabs, dummyHeaderTab, onMovingTabMovingOnHeader]);
+  }, [movingTab, dockNode]);
 
   const mouseLeaveHeader = React.useCallback(() => {
     if (movingTab != null) {
-      onMovingTabLeavingHeader && onMovingTabLeavingHeader();
+      dispatch(["tabLeavingDockHeader", { dockNode }]);
     }
-  }, [movingTab, tabs, onMovingTabLeavingHeader]);
+  }, [movingTab, dockNode]);
 
   const mouseEnterContent = React.useCallback(() => {
     if (movingTab != null) {
-      onMovingTabEnteringContent && onMovingTabEnteringContent();
+      dispatch(["tabEnteringDockContent", { dockNode }]);
     }
-  }, [movingTab, tabs, onMovingTabEnteringContent]);
+  }, [movingTab, dockNode]);
 
   const mouseMoveContent = React.useCallback((e) => {
     if(movingTab != null && contentRef.current != null){
@@ -105,15 +100,15 @@ export const Dock = ({
         contentPosition = "right";
       }
 
-      onMovingTabMovingOnContent && onMovingTabMovingOnContent(contentPosition)
+      dispatch(["tabMovingOnDockContent", { dockNode, positionOnContent: contentPosition }]);
     }
-  }, [movingTab, tabs, onMovingTabMovingOnContent])
+  }, [movingTab, dockNode])
 
   const mouseLeaveContent = React.useCallback(() => {
     if (movingTab != null) {
-      onMovingTabLeavingContent && onMovingTabLeavingContent();
+      dispatch(["tabLeavingDockContent", { dockNode }]);
     }
-  }, [movingTab, tabs, onMovingTabLeavingContent]);
+  }, [movingTab, dockNode]);
 
   const getDummyContentSplitClassName = (dummy) => dummy?.position || "center";
 

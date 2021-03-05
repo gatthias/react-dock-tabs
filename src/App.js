@@ -2,40 +2,41 @@ import React from "react";
 import "./style.css";
 
 import { Tab, DockTabs } from "./DockTabs";
+import { LayoutBuilder } from "./DockTabs/model/LayoutBuilder";
+
+
+const initialLayout = LayoutBuilder.newLayout("BaseLayout")
+  .setOrientation("h")
+  .split(
+    LayoutBuilder.newSplitter()
+      .setOrientation("v")
+      .setSizeRatio(0.2)
+      .split(
+        LayoutBuilder.newDock()
+          .setSizeRatio(0.5)
+          .addTab("menu-1")
+      )
+      .split(
+        LayoutBuilder.newDock()
+          .setSizeRatio(0.5)
+          .addTab("menu-2")
+          .addTab("menu-3")
+          .setActiveTab("menu-2")
+      )
+  )
+  .split(
+    LayoutBuilder.newDock()
+      .setSizeRatio(0.8)
+      .addTab("panel-1")
+      .addTab("panel-2")
+      .setActiveTab("panel-2")
+  )
+  .toData();
 
 export default function App() {
-  const [layout, setLayout] = React.useState({
-    name: "BaseLayout",
-    mainArea: {
-      type: "split",
-      orientation: "h",
-      children: [
-        {
-          type: "split",
-          orientation: "v",
-          ratio: 0.2,
-          children: [
-            {
-              ratio: 0.5,
-              type: "dock",
-              tabs: ["menu-1"]
-            },
-            {
-              ratio: 0.5,
-              type: "dock",
-              tabs: ["menu-2", "menu-3"]
-            }
-          ]
-        },
-        {
-          ratio: 0.8,
-          type: "dock",
-          tabs: ["panel-1", "panel-2"],
-          activeTab: "panel-2"
-        }
-      ]
-    }
-  });
+
+  const [layout, setLayout] = React.useState(initialLayout);
+ 
 
   const [tabs, setTabs] = React.useState({
     "menu-1": {
@@ -78,7 +79,7 @@ export default function App() {
     }
   });
 
-  const layoutChange = React.useCallback(newLayout => setLayout(newLayout));
+  const layoutChange = React.useCallback(newLayout => (setLayout(newLayout), console.log('layout changed')));
 
   return (
     <DockTabs

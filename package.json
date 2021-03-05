@@ -4,7 +4,8 @@
   "private": true,
   "dependencies": {
     "react": "^17.0.0",
-    "react-dom": "^17.0.0"
+    "react-dom": "^17.0.0",
+    "uid": "^2.0.0"
   },
   "scripts": {
     "start": "react-scripts start",
