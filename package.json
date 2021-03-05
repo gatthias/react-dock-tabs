@@ -1,5 +1,8 @@
 {
   "name": "react-dock-tabs",
+  "repository": {
+    "url": "https://github.com/gatthias/react-dock-tabs"
+  },
   "author": {
     "name": "Matthias Gaudin",
     "url": "https://github.com/gatthias"
